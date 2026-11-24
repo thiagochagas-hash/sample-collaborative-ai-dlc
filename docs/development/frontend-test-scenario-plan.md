@@ -667,7 +667,227 @@ observes via `useSprint()`, per `req-stack-scenario-bound` and
 
 ### Chapter: u4-pages (pending)
 
-### Chapter: u5-intent-components (pending)
+### Chapter: u5-intent-components
+
+Owned by `comp-u5-intent-components`, delivering `req-u5-intent-components`
+alone per `unit-of-work`'s `unit-u5-intent-components` entry and
+`unit-of-work-story-map`'s `map-u5-intent-components` mapping. Per
+`business-rules-u5-intent-components`, `domain-entities-u5-intent-components`,
+and `security-design-u5-intent-components`, this chapter covers the 19
+untested files in `frontend/src/components/intent/` — confirmed by direct
+read of the directory: every other file in that directory (`ArtifactContentEditor`,
+`ArtifactHistoryDrawer`, `ArtifactHtmlFrame`, `ArtifactMarkdown`,
+`ArtifactViewer`, `CodeSection`, `ComposePanel`, `DeliveryStatus`,
+`IntentGraphPopover`, `MethodologyReleaseBadge`, `NativeExportSetupDialog`,
+`PendingQuestionsTabs`, `ProvenanceTree`, `QuorumEditPanel`, `RecomposePanel`,
+`SensorChips`, `SensorDiagnostics`, `StageDetail`, `StageReviewPanel`,
+`TrackerAttachmentImport`, `UnitLaneBoard`, `UsageMetrics`,
+`artifactReferences`, `documentHelpers`) already carries a passing
+`*.test.tsx`/`*.test.ts` sibling. Per Rule 1 of `business-rules-u5-intent-components`
+and `contract-scenario-type-bound`, every scenario below is `render-interaction`
+except the six scenarios exercising `ArtifactEditControls.tsx`'s three direct
+`intentsService.*` calls, which are `call-return-throw` per
+`contract-service-call-signatures`. `requirementId` is `req-u5-intent-components`
+for every row, per `contract-traceability-ledger`.
+
+#### Known discrepancy — the stated `u3-contexts` dependency does not hold
+
+`unit-of-work` and `requirements` both state this unit depends on `u1-services`,
+`u2-hooks`, and `u3-contexts`. Direct inspection of all 19 files (grep for
+`useIntent`/`useSprint` imports across `GateCard.tsx`, `AgentProgressCard.tsx`,
+`HistorySection.tsx`, `WorkProductsSection.tsx`, `IntentConfigurationDialog.tsx`,
+`IntentPhaseDiagram.tsx`, and `IntentStageList.tsx`) confirms every file that
+reads shared run state imports `useIntent` from `@/contexts/IntentContext`,
+never `useSprint` from `u3-contexts`' `SprintContext.tsx`. `IntentContext.tsx`
+already has a passing test file and is excluded from `req-u3-contexts`' own
+scope ("the one untested context"). Per `business-rules-u5-intent-components`
+Rule 4 and the dependency-boundary design in `security-design-u5-intent-components`,
+every scenario below that mocks shared intent state mocks `IntentContextValue`'s
+fields directly; no scenario in this chapter constructs, imports, or mocks a
+`SprintProvider` or `SprintContextValue` — doing so would test the wrong
+contract. `contract-context-state-shape`'s unit-pack listing names this unit
+as a consumer of the SprintContext shape; this chapter records that as not
+concretely realized, mirroring the precedent `business-rules-u2-hooks` set
+for `useSprintGraph.ts` and `business-rules-u9-discussion-components` set for
+its own undeclared-dependency note. The `u1-services` edge (`ArtifactEditControls.tsx`'s
+three `intentsService.*` calls) and the `u2-hooks` edge (`useIntentGraph` in
+`GateCard.tsx`, `DerivedItemRow.tsx`, `WorkProductsSection.tsx` only — confirmed
+by direct read) both hold as stated.
+
+#### Undeclared cross-unit edge — `DiscussButton` (`comp-u9-discussion-components`)
+
+`DerivedItemRow.tsx` and `HistorySection.tsx`'s `CompactQuestionRow` both
+render `<DiscussButton />` from the already-covered `components/discussion/`
+directory (`req-u9-discussion-components`, merged ahead of this unit per
+`unit-of-work-story-map`'s ordering). Per `business-rules-u5-intent-components`
+Rule 5 and the cross-unit trust-boundary design in
+`security-design-u5-intent-components`, no scenario below re-derives
+`DiscussButton`'s own behavior contract — that coverage belongs to
+`u9-discussion-components`. Each of the two host files instead gets a
+with-provider and a without-provider variant, confirming the host file's own
+content renders correctly either way and that `DiscussButton` renders `null`
+with no mounted `DiscussionProvider` (its documented fail-safe default).
+
+#### Won't-Have verification
+
+Per `req-wont-have-verification` and Rule 7 of `business-rules-u5-intent-components`,
+all 19 files in scope export at least one component or function with
+independently testable, non-trivial behavior — none is a pure re-export
+barrel, type-only module, or static constant with no functions. No file in
+this chapter is marked Won't-Have.
+
+#### Acceptance-criteria coverage
+
+`req-u5-intent-components`'s three acceptance criteria map as follows: ac1
+("each untested file has at least one scenario asserting rendered output for
+its primary prop/state combination") is satisfied once per file by the first
+row listed for that file below; ac2 (`GateCard` and `WaitingCard` each get a
+human-gate-pending scenario) is satisfied by the `question`-kind `GateCard`
+row and the primary-lookup `WaitingCard` row, both called out explicitly
+below; ac3 (`StageGridEditor` and `IntentStageList` each get an empty/zero-stage
+scenario) is satisfied by the `stages: []` and `stageRows: []` rows below.
+Rows beyond a file's first are additional coverage required by
+`business-rules-u5-intent-components`'s per-file rules (BR12–BR16), by a
+named scenario design in `security-design-u5-intent-components`, or by a
+per-file variant catalogued in `domain-entities-u5-intent-components`' Entity
+Catalog clusters — each cited inline.
+
+#### Scenario entries and traceability rows
+
+Per `contract-traceability-ledger`, every row below is one `ScenarioEntry`
+linked into this plan's single ledger, with `requirementId: req-u5-intent-components`
+(omitted from each row for brevity — no row in this chapter uses a different
+requirement id). Fixture values follow `security-design-u5-intent-components`'s
+Fixture and Artifact Hygiene Design: synthetic identifiers (`intent-fixture-1`,
+`gate-fixture-1`, `artifact-fixture-1`), never a real intent id, artifact
+body, or session token.
+
+| targetFile | behaviorDescription | scenarioType | acceptanceRef |
+| --- | --- | --- | --- |
+| `AgentProgressCard.tsx` | Running, no pending gate: shows "Running", stage/phase badges, elapsed time, and the last two non-blank lines of `outputBuffers` | render-interaction | ac1 |
+| `AgentProgressCard.tsx` | Waiting, no pending gate: shows "Resuming" and a lifecycle-event summary instead of output lines | render-interaction | derived invariant (BR12) |
+| `AgentProgressCard.tsx` | Waiting WITH a pending gate: delegates entirely to `WaitingCard`, passing `intent`, `gates`, `stageRows`, `stageNameOf`, `rewindIntent` — `WaitingCard`'s content renders instead of the running UI | render-interaction | derived invariant (BR12) |
+| `WaitingCard.tsx` | Human-gate-pending baseline: one `pending` gate matching `intent.pendingHumanTaskId` and a `WAITING_FOR_HUMAN` stage row renders "Waiting for your input", the resolved stage name, and the question preview text | render-interaction | ac2 |
+| `WaitingCard.tsx` | Fallback lookup: no gate's `humanTaskId` matches `intent.pendingHumanTaskId` but ≥2 gates have `status: 'pending'` — the rendered preview reflects the LAST pending gate in array order (`findLast` semantics), not the first | render-interaction | security-design (gate-lookup fallback) |
+| `WaitingCard.tsx` | "Restart stage" → confirm dialog → `rewindIntent(stageId)` called, dialog closes on success | render-interaction | ac1 |
+| `WaitingCard.tsx` | "Restart stage" rejection: `rewindError` is shown and the confirm dialog stays open | render-interaction | derived invariant (domain-entities Cluster A) |
+| `WaitingCard.tsx` | "Restart with guidance": textarea required non-empty; submitting calls `rewindIntent(stageId, guidance.trim())` | render-interaction | derived invariant (domain-entities Cluster A) |
+| `ArtifactBodyStatus.tsx` | `contentUnavailable === 'too_large'` renders the too-large status text | render-interaction | ac1 |
+| `ArtifactBodyStatus.tsx` | `contentUnavailable === 'error'` renders `role="alert"` text, with the Retry button present only when `onRetry` is supplied and absent when it is not | render-interaction | derived invariant (BR12) |
+| `ArtifactBodyStatus.tsx` | `content === undefined` (still loading) renders `role="status"` spinner text | render-interaction | derived invariant (BR12) |
+| `ArtifactBodyStatus.tsx` | None of the three conditions hold: the component renders `null` | render-interaction | derived invariant (BR12) |
+| `ArtifactContent.tsx` | `rendersAsHtml(artifactType, content)` true: renders `ArtifactHtmlFrame` with `content`/`title` | render-interaction | ac1 |
+| `ArtifactContent.tsx` | `rendersAsHtml` false: renders `ArtifactMarkdown` with all passed props | render-interaction | derived invariant (BR12) |
+| `ArtifactEditControls.tsx` | `useArtifactEditability`: `artifact.supersededAt` set returns the "Superseded by a rewind…" reason, checked before run status | render-interaction | ac1 |
+| `ArtifactEditControls.tsx` | `useArtifactEditability`: `detail.intent.status` of `CREATED`/`RUNNING` returns the "wait for the stage to park or finish" reason | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | `useArtifactEditability`: any `detail.quorumEdits[].state` in `{PLANNING, AWAITING_APPROVAL, APPLYING}` returns the "Quorum edit is in progress" reason | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | `useArtifactEditability`: none of the above holds, result is `null` (editable) | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | `ArtifactStaleBadge` renders `null` when `artifact.staleSince` is falsy | render-interaction | ac1 |
+| `ArtifactEditControls.tsx` | `ArtifactStaleBadge` renders the "possibly stale" badge and "Mark verified" button when `artifact.staleSince` is set | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | `ArtifactStaleBadge` verify success: `intentsService.verifyArtifact` resolves, `reload()` is called, the badge is gone and the button is re-enabled | call-return-throw | security-design (mutating-action pairing) |
+| `ArtifactEditControls.tsx` | `ArtifactStaleBadge` verify rejection: the thrown error is swallowed (logged via `console.error`, not surfaced in the UI) and `reload()` is NOT called | call-return-throw | security-design (mutating-action pairing) |
+| `ArtifactEditControls.tsx` | "Edit document" impact-fetch success: `intentsService.artifactImpact` resolves, the drift-warning dialog opens showing `consumedBy`/`downstream` counts (including the zero-consumer, zero-downstream copy variant) | call-return-throw | ac1 |
+| `ArtifactEditControls.tsx` | "Edit document" impact-fetch rejection (fail-closed): `error` is set to "Could not load the impact data — try again", the warning dialog never opens, and `onStartEdit` is never invoked | call-return-throw | security-design (quorum-edit safeguard, fail-closed) |
+| `ArtifactEditControls.tsx` | From the drift-warning dialog, "Edit anyway" closes it and calls `onStartEdit()` — it does NOT open the Quorum dialog | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | From the drift-warning dialog, "Edit with Quorum" closes it and opens the Quorum dialog instead — it does NOT call `onStartEdit` | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | The Quorum dialog's submit button is disabled until `changeDescription.trim()` is non-empty | render-interaction | derived invariant (domain-entities Cluster B) |
+| `ArtifactEditControls.tsx` | Quorum submit success: `intentsService.startQuorumEdit(projectId, intentId, artifact.id, description)` resolves; the dialog closes, `changeDescription` clears, and `reload()` is called | call-return-throw | security-design (mutating-action pairing) |
+| `ArtifactEditControls.tsx` | Quorum submit rejection with an `Error` instance: `error` is set to `err.message`; the dialog stays open | call-return-throw | security-design (mutating-action pairing) |
+| `ArtifactEditControls.tsx` | Both "Edit document" and "Edit with Quorum" are disabled whenever `blocked` is non-null; "Edit document" is additionally disabled while `impactLoading` | render-interaction | derived invariant (domain-entities Cluster B) |
+| `DerivedItemCountChip.tsx` | `count === 0` renders `null` | render-interaction | ac1 |
+| `DerivedItemCountChip.tsx` | `count > 0` renders the "N items" chip with correct singular/plural title text; clicking calls `focusWorkProduct({ kind: 'item', id: '', filterArtifactId: artifactId })` without propagating the click | render-interaction | derived invariant (domain-entities Cluster F) |
+| `DerivedItemRow.tsx` | Clicking the row, or pressing Enter/Space while it is focused, calls `onPreview()` | render-interaction | ac1 |
+| `DerivedItemRow.tsx` | `item.priority` present shows the priority badge; `item.priority` absent hides it | render-interaction | derived invariant (domain-entities Cluster F) |
+| `DerivedItemRow.tsx` | `showGraph={false}` hides `IntentGraphPopover` entirely rather than passing it empty neighbors | render-interaction | derived invariant (domain-entities Cluster F) |
+| `DerivedItemRow.tsx` | Rendered with a mocked `DiscussionProvider` mounted: the row's own content renders correctly alongside a present `DiscussButton` | render-interaction | security-design (cross-unit trust, with-provider) |
+| `DerivedItemRow.tsx` | Rendered with no `DiscussionProvider`: the row's own content still renders correctly and `DiscussButton` renders `null` | render-interaction | security-design (cross-unit trust, without-provider) |
+| `GateCard.tsx` | `question`-kind gate with parseable `questions` JSON renders `QuestionEditor` with the parsed `Question` and the `references` object built from `detail.artifacts`/mocked `useIntentGraph().derivedItems`; a non-blank steering note is included as `{ steering }` on `onAnswer` | render-interaction | ac2 |
+| `GateCard.tsx` | Same `question`-kind gate with the steering note left blank: `onAnswer`'s second argument has NO `steering` key at all (not `steering: ''`) | render-interaction | security-design (steering-payload integrity) |
+| `GateCard.tsx` | `validation`-kind gate renders `stageArtifacts` badges and a "Review stage" button that navigates to `/space/:projectId/intent/:intentId/review/:humanTaskId` | render-interaction | derived invariant (domain-entities Cluster C) |
+| `GateCard.tsx` | `review-verdict`-kind gate renders `gate.options` as buttons (or the default Approve/Reject pair when `options` is empty), each calling `onAnswer(gate, { answer: opt, status: /reject/i.test(opt) ? 'rejected' : 'answered' })` | render-interaction | derived invariant (domain-entities Cluster C) |
+| `GateCard.tsx` | `engineGateStatusFor` mapping: `/^(reject\|request-changes)/i` → `'rejected'`, `/^(approve\|accept-as-is\|override-and-approve)/i` → `'approved'` (including `override-and-approve`), anything else → `'answered'` | render-interaction | derived invariant (domain-entities Cluster C) |
+| `GateCard.tsx` | An engine-approval option prefixed `request-changes` reveals the optional feedback `Textarea`; submitting with non-empty feedback sends `{ decision: opt, feedback }` | render-interaction | derived invariant (domain-entities Cluster C) |
+| `GateCard.tsx` | `walkingSkeletonBranch`: `gate.prompt` starting with `'Walking skeleton'` and `gate.unitSlug` set strips the `(branch …)` suffix and renders a `UnitBranchEntry` row beneath the prompt | render-interaction | derived invariant (domain-entities Cluster C) |
+| `HistorySection.tsx` | Both `historicalGates` (gates with `status !== 'pending'`) and `steering` empty: renders `null` | render-interaction | ac1 |
+| `HistorySection.tsx` | Historical gates group by `stageInstanceId`, sorted by plan position (`phase`, then `order`) derived from `stageRows` — a non-arrival-order input still groups and orders by plan position, not by gate-arrival order | render-interaction | derived invariant (BR16) |
+| `HistorySection.tsx` | Within a group, gates sort chronologically by `answeredAt ?? createdAt` | render-interaction | derived invariant (BR16) |
+| `HistorySection.tsx` | `CompactQuestionRow`'s "Revise answer" affordance appears only when the gate is answered (`status !== 'pending'` or `answeredAt` set) AND `detail.intent.status` is not `SUCCEEDED`/`CANCELLED` | render-interaction | derived invariant (domain-entities Cluster E) |
+| `HistorySection.tsx` | Revise submit success: `reviseGate(gate, revision.trim())` is called and the form clears | render-interaction | derived invariant (domain-entities Cluster E) |
+| `HistorySection.tsx` | Revise submit failure: `reviseError` is set and the form stays populated | render-interaction | derived invariant (domain-entities Cluster E) |
+| `HistorySection.tsx` | A `status === 'superseded'` gate shows "Retired unanswered." instead of an answer block, with a muted-gray status dot | render-interaction | derived invariant (domain-entities Cluster E) |
+| `HistorySection.tsx` | `formatGateAnswer` resolves a plain string answer and a `{ decision }` object answer | render-interaction | derived invariant (domain-entities Cluster E) |
+| `HistorySection.tsx` | `formatGateAnswer` resolves a structured `{ answers: [{ selectedOptions, freeText }] }` object, mapping `selectedOptions` indices back to each question's option labels | render-interaction | derived invariant (domain-entities Cluster E) |
+| `HistorySection.tsx` | `formatGateAnswer`'s fallback `JSON.stringify` path for an unrecognized answer shape | render-interaction | derived invariant (domain-entities Cluster E) |
+| `IntentConfigurationDialog.tsx` | Renders `null` when `!detail` | render-interaction | ac1 |
+| `IntentConfigurationDialog.tsx` | Status badge renders the correct icon/style for each of `waiting`/`running`/`succeeded`/`failed` (derived from `intent.status`, including `CREATED` folding into `running`) | render-interaction | derived invariant (BR13) |
+| `IntentConfigurationDialog.tsx` | "Reshape" button renders only when `onOpenReshape` is supplied and is absent otherwise; clicking it calls `onOpenChange(false)` BEFORE invoking `onOpenReshape()` | render-interaction | derived invariant (BR13) |
+| `IntentConfigurationDialog.tsx` | The environment section renders "No environment snapshot was captured for this run." when `intent.environment` is absent | render-interaction | derived invariant (BR13) |
+| `IntentPhaseDiagram.tsx` | `!compiled \|\| !workflowPhases`: renders three pulsing skeleton bars (`aria-hidden="true"`) and no phase content | render-interaction | ac1 |
+| `IntentPhaseDiagram.tsx` | `compiled`/`workflowPhases` present but grouping `stageRows` by phase (after excluding `initializationPhasePaths`) yields `[]`: renders "No phases resolved yet." | render-interaction | derived invariant (BR12) |
+| `IntentPhaseDiagram.tsx` | The active phase (per `derivePhaseState`) always renders expanded with a pulsing live-indicator dot and ignores `expandedManual` when clicked | render-interaction | derived invariant (BR12) |
+| `IntentPhaseDiagram.tsx` | A non-active phase defaults to collapsed and toggles via `expandedManual` on click; a `done` non-active phase shows a check icon instead of the pending dot | render-interaction | derived invariant (BR12) |
+| `IntentStageList.tsx` | `stageRows: []` renders the literal fallback text "No stages resolved yet." with no `Accordion` element present | render-interaction | ac3 |
+| `IntentStageList.tsx` | A single-row, single-phase input renders exactly one `AccordionItem` with that phase's name and a `1/1`-style progress readout once the row's state is `SUCCEEDED` | render-interaction | ac1 |
+| `IntentStageList.tsx` | A non-contiguous arrangement — unit-lane rows for slug A, then a flat row, then more unit-lane rows for slug A again — renders TWO separate per-unit segments, not one merged segment, because segmentation is positional, not a global group-by | render-interaction | derived invariant (BR16) |
+| `IntentStageList.tsx` | A `FAILED`, `planned: true` row with `detail.intent.status` in `{SUCCEEDED, FAILED, WAITING, CANCELLED}` shows the retry icon-button, which calls `rewindIntent(row.stageId)` and swallows a thrown rejection; a row that is not `planned`, not `FAILED`, or whose intent status is `RUNNING`/`CREATED` does NOT show the retry button | render-interaction | derived invariant (domain-entities Cluster D) |
+| `ScopeBadge.tsx` | `scopeColor(scope)` is deterministic: the SAME scope string maps to the SAME of the six palette entries across repeated calls | render-interaction | derived invariant (BR14) |
+| `StageGridEditor.tsx` | `stages: []` renders the `data-testid="stage-grid-editor"` container present with zero `data-testid="grid-stage-*"` rows and zero phase `<Label>` groups (the component does NOT return `null`) | render-interaction | ac3 |
+| `StageGridEditor.tsx` | Populated: one phase group per distinct `phasePath` (including the `''`/`'unphased'` fallback label), sorted by `phasePath`, then `order`, then `stageId` | render-interaction | ac1 |
+| `StageGridEditor.tsx` | Each checkbox's `checked` reflects `grid[stageId] === 'EXECUTE'`; clicking an unlocked, non-disabled row calls `onToggle(stageId)` | render-interaction | derived invariant (domain-entities Cluster D) |
+| `StageGridEditor.tsx` | A row with `lockedStageIds.has(stageId)` renders disabled with the lock icon and `onToggle` does NOT fire on click | render-interaction | derived invariant (domain-entities Cluster D) |
+| `StageGridEditor.tsx` | A row is disabled and `onToggle` does NOT fire when the `disabled` prop is true, independent of `lockedStageIds` | render-interaction | derived invariant (domain-entities Cluster D) |
+| `UnitBranchEntry.tsx` | `item.branch` falsy renders `null` | render-interaction | ac1 |
+| `UnitBranchEntry.tsx` | `item.targets.length === 0` renders the single-row fallback showing the branch name with no link | render-interaction | derived invariant (domain-entities Cluster F) |
+| `UnitBranchEntry.tsx` | `item.targets.length > 0` renders one row per target: a link when `target.url` is set, otherwise plain `<code>` text | render-interaction | derived invariant (domain-entities Cluster F) |
+| `UnitBranchEntry.tsx` | The "Open PR #N" affordance renders only when `showPullRequests` is true AND `target.prUrl` is set; it is absent when either condition fails | render-interaction | derived invariant (domain-entities Cluster F) |
+| `WorkProductsSection.tsx` | Zero artifacts, zero question gates, zero steering, zero code items, AND `detail.intent.status` not in `{CREATED, RUNNING, WAITING}`: renders `null` entirely | render-interaction | ac1 |
+| `WorkProductsSection.tsx` | Same zero counts but `detail.intent.status` in `{CREATED, RUNNING, WAITING}`: still renders the Card shell with the "No work products yet…" placeholder | render-interaction | derived invariant (domain-entities Cluster E) |
+| `WorkProductsSection.tsx` | `detail.artifacts.length > 0` or non-empty `codeItems`: renders `ProvenanceTree` with the assembled props instead of the placeholder | render-interaction | derived invariant (domain-entities Cluster E) |
+| `WorkProductsSection.tsx` | The sort button appears only when `documentCount > 1`; clicking it flips `newestFirst` and persists via `setDocumentOrder` | render-interaction | derived invariant (domain-entities Cluster E) |
+| `WorkProductsSection.tsx` | A non-empty `detail.intent.planWarnings` renders the collapsible warnings `<details>`, but only while `detail.intent.status !== 'SUCCEEDED'` | render-interaction | derived invariant (domain-entities Cluster E) |
+| `artifactAccent.ts` | `null`/`undefined` input returns the fixed `FALLBACK` accent | render-interaction | ac1 |
+| `artifactAccent.ts` | A non-empty string deterministically hashes onto one of the 7 entries in `ACCENTS`, the SAME entry across repeated calls with the same input | render-interaction | derived invariant (BR14) |
+| `stageStyle.tsx` | `StageBadge` renders the correct label/style for each of the 6 `StageState` values, and falls back to `PENDING`'s style for an unrecognized value | render-interaction | ac1 |
+| `stageStyle.tsx` | `formatDuration(null)` returns `null`; a set start returns `null` end-state formatting | render-interaction | derived invariant (domain-entities Cluster F) |
+| `stageStyle.tsx` | `formatDuration` boundary formatting across sub-minute (`<60s`), minute (`<60m`), and hour (`>=60m`) ranges | render-interaction | derived invariant (domain-entities Cluster F) |
+| `stageStyle.tsx` | `stageDurations`' "still parked" branch (`parkedAt` set, no `completedAt`) folds the open park window into `waitedMs` live; `waiting` is `null` when `waitedMs < 1000` | render-interaction | derived invariant (domain-entities Cluster F) |
+| `stageStyle.tsx` | `useTick(active)` with fake timers: a re-render tick occurs every second only while `active` is true and stops cleanly (no lingering interval, no post-unmount `act` warning) once `active` flips `false` | render-interaction | derived invariant (BR15) |
+| `workProductsFocus.ts` | A subscribed listener via `onWorkProductFocus` receives exactly the `WorkProductFocus` object passed to `focusWorkProduct` | render-interaction | ac1 |
+| `workProductsFocus.ts` | After calling the returned unsubscribe function, the listener receives no further calls | render-interaction | derived invariant (domain-entities Cluster F) |
+| `workProductsFocus.ts` | `scrollAndFlash` happy path: the element exists, `scrollIntoView` is called and the flash classes toggle off after the timeout | render-interaction | derived invariant (domain-entities Cluster F) |
+| `workProductsFocus.ts` | `scrollAndFlash` retry path, with fake timers: the element is missing, the function retries up to 10 times at 80ms intervals, then gives up silently | render-interaction | derived invariant (BR15) |
+
+Row count: 92, covering all 19 files `req-u5-intent-components` names.
+`ArtifactEditControls.tsx` carries the largest share (16 rows) as its
+richest state machine, consistent with `domain-entities-u5-intent-components`
+calling it out as "the unit's most intricate business logic." The six
+`call-return-throw` rows (two per `intentsService.*` call: `verifyArtifact`,
+`artifactImpact`, `startQuorumEdit`) satisfy the minimum
+`security-design-u5-intent-components` fixes for the mutating-action
+authorization boundary. ac2's two named scenarios (`GateCard` question-gate,
+`WaitingCard` primary-lookup) and ac3's two named scenarios (`StageGridEditor`
+and `IntentStageList` empty input) are each present above.
+
+#### Query/assertion, dependency-boundary, and advisory-framing conformance
+
+Every scenario above is phrased as a Testing Library role/text/label query or
+a captured-callback assertion plus an interaction or outcome, per
+`req-stack-scenario-bound` and Rule 1 of `business-rules-u5-intent-components`
+— no scenario proposes snapshot testing, shallow rendering, or an assertion
+on `useIntent()`'s internal React Context object. Every scenario that mocks
+shared run state mocks `IntentContextValue` directly, never a `SprintProvider`
+or `SprintContextValue`, per the Known Discrepancy note above and the
+dependency-boundary design in `security-design-u5-intent-components`. The
+three files reading graph-derived data (`GateCard.tsx`, `DerivedItemRow.tsx`,
+`WorkProductsSection.tsx`) mock `u2-hooks`' `useIntentGraph` return shape
+directly via `vi.mock`, never a live graph provider. No scenario above
+re-derives `DiscussButton`'s own behavior contract, per the Undeclared
+Cross-Unit Edge note. Framing stays advisory throughout, per
+`req-advisory-alignment`: every scenario above reads as coverage the plan is
+building toward ("the scenario asserts…" / "renders…" / "calls…" phrasing),
+never as behavior a CI gate already enforces. No deliverable above is a
+literal `.test.ts`/`.test.tsx` file, per `req-plan-not-code` — writing or
+running this unit's actual test code is a separate, later effort.
 
 ### Chapter: u6-graph-components
 
