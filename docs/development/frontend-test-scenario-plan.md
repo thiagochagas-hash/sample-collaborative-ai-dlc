@@ -548,9 +548,122 @@ hook's internal `Y.Doc`/ref structure rather than its public return shape
 Testing Library query, and every `state-transition`/`call-return-throw` row
 asserts a before/after on the state shapes `domain-entities-u2-hooks` catalogs.
 
-### Chapter: u3-contexts (pending)
+### Chapter: u3-contexts
 
-### Chapter: u3-contexts (pending)
+Owned by `comp-u3-contexts`, which delivers `req-u3-contexts` alone, depending
+on `comp-plan-governance`, `comp-u1-services`, and `comp-u2-hooks` per
+`unit-of-work`'s `unit-u3-contexts` implementation note. Per
+`business-rules-u3-contexts`, `domain-entities-u3-contexts`,
+`security-requirements-u3-contexts`, `security-design-u3-contexts`, and
+`tech-stack-decisions-u3-contexts`, this chapter covers the one untested file
+in scope, `frontend/src/contexts/SprintContext.tsx` — `AuthContext.tsx` and
+`IntentContext.tsx` are excluded per `req-u3-contexts`'s third acceptance
+criterion, since both already carry passing test files. Every scenario below
+is `render-interaction`, the single type `tech-stack-decisions-u3-contexts`
+binds this unit to per `contract-scenario-type-bound` — no `call-return-throw`
+or `state-transition` row appears in this chapter, since the file under test
+is exercised exclusively through a harness consumer calling `useSprint()`,
+never through a direct call to a mocked dependency or a `renderHook` of the
+context itself. `requirementId` is `req-u3-contexts` for every row, per
+`contract-traceability-ledger`.
+
+#### Known gap — `useSprintGraph.ts` is not actually covered by the published `u2-hooks` chapter
+
+Direct inspection of `frontend/src/hooks/` (per `req-wont-have-verification`'s
+evidence standard, applied here to a naming/coverage check rather than a
+Wont-Have classification) finds that `useSprintGraph.ts` **does exist** — it
+is a real, longstanding file (present since the repository's initial
+release), distinct from `useIntentGraph.ts` (whose own leading comment calls
+it "the v2 port of v1's `useSprintGraph`"). `frontend/src/contexts/SprintContext.tsx`
+imports `useSprintGraph` from `@/hooks/useSprintGraph` directly, and its
+returned shape — `{ graph, loading, error, reload, getNeighbors,
+hasRelationships, nodeCount, edgeCount }` — matches exactly what
+`domain-entities-u3-contexts` and `business-rules-u3-contexts` already
+describe as this unit's `u2-hooks` dependency boundary.
+
+This contradicts the published `u2-hooks` chapter above, whose own "Known
+discrepancy" note concluded `useSprintGraph.ts` "does not exist" and drafted
+its two graph-lookup scenarios against `useIntentGraph.ts` instead — a
+different file, with a materially different returned shape (`{ nodes, edges,
+loading, error, getNeighbors, hasCodeTraceability, derivedItems,
+itemsByArtifact, reload }`), that `useSprintGraph.ts` neither imports nor
+forwards to. The practical effect: the real `useSprintGraph.ts` — the hook
+this unit's own `SprintContext.tsx` depends on — has no traceability row of
+its own anywhere in this plan.
+
+Per this repository's guidance to investigate a discrepancy rather than trust
+either side at face value, this chapter does not silently absorb
+`useSprintGraph.ts` into its own scope: `req-u3-contexts` and `unit-of-work`'s
+`unit-u3-contexts` definition fix this unit at exactly one file,
+`SprintContext.tsx`, and widening that scope is a requirements-layer
+correction, not a single unit's code-generation-time call (the same boundary
+the `u2-hooks` chapter's own "Known gap" note already drew for its own three
+extra files). This chapter instead mocks `useSprintGraph`'s real, confirmed
+return shape at the module boundary (see the Graph pass-through and
+Polling-tier rows below) and flags the gap here for a future correction to
+`req-u2-hooks` or a new corrective unit.
+
+#### Scenario entries and traceability rows
+
+Per `contract-traceability-ledger`, every row below is one `ScenarioEntry`
+drafted via `component-methods`' `draftScenario` and linked via
+`linkTraceability` into this plan's single ledger. Fixture values follow
+`security-design-u3-contexts` and `security-requirements-u3-contexts`'s
+Fixture and Artifact Hygiene convention: synthetic route-param ids
+(`project-fixture-1`, `sprint-fixture-1`), synthetic entity fixtures reusing
+`u1-services`' own fixture shapes, and a synthetic `SprintGraphState`
+(`graph`, `getNeighbors`, `reload` as `vi.fn()` mocks) — never a value copied
+from a live environment. Every mocked `services/*` rejection reuses the exact
+`ApiError` shape `contract-service-call-signatures` fixes (per
+`business-rules-u3-contexts` Rule 5 and `security-design-u3-contexts`'s
+Error-Shape Reuse design), not a self-invented shape.
+
+| #   | `targetFile`                 | `behaviorDescription`                                                                                                                                                                                                                     | `scenarioType`      | `acceptanceRef`                                        |
+| --- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------- |
+| 1   | `contexts/SprintContext.tsx` | Mount gate — rendered with `useParams` supplying an empty `projectId` or `sprintId`: none of the nine `services/*` calls (`sprintsService`…`timelineEventsService`) fire, and `loading` stays `true`                                     | render-interaction  | ac1 (mount-gate guard)                                  |
+| 2   | `contexts/SprintContext.tsx` | Providing state to a consumer — rendered with both `projectId`/`sprintId` present: all nine `services/*` calls resolve once each, a harness consumer's `useSprint()` observes the populated `SprintContextValue` fields, and `loading` transitions from `true` to `false` across that resolution | render-interaction  | ac1                                                      |
+| 3   | `contexts/SprintContext.tsx` | Fail-open on service rejection — one of the nine `services/*` calls (e.g. `sprintsService.get`) mocked to reject with an `ApiError`: `error` stays `null` and `loading` still resolves to `false`, confirming the consumer gets no visible failure signal today | render-interaction  | derived invariant — silent-failure coverage obligation  |
+| 4   | `contexts/SprintContext.tsx` | `reviewsService` reset-not-stale — `reviewsService.get` mocked to reject after an earlier successful resolution: the consumer's `review` becomes `null` (reset), not left at the prior value                                              | render-interaction  | derived invariant                                       |
+| 5   | `contexts/SprintContext.tsx` | Context update propagating to multiple consumers — two or more sibling harness consumers rendered under the same `SprintProvider`: once `reload()` resolves (or `reloadSprint()` is invoked through one consumer), every sibling consumer observes the identical updated `SprintContextValue`, not a stale or partially-updated copy | render-interaction  | ac2                                                      |
+| 6   | `contexts/SprintContext.tsx` | Polling tier — fast poll — with `sprint.currentAgentStatus` set to `'running'` or `'waiting'`, Vitest fake timers advanced to `10000`ms: `reloadSprint` is invoked at that interval                                                        | render-interaction  | derived invariant                                       |
+| 7   | `contexts/SprintContext.tsx` | Polling tier — slow poll and re-arm — a status change to any other value (including `null`) clears the prior interval and re-arms it at `60000`ms, asserted by advancing fake timers past the old `10000`ms mark with no additional call, then past `60000`ms with exactly one | render-interaction  | derived invariant                                       |
+| 8   | `contexts/SprintContext.tsx` | Graph pass-through — `getNeighbors` and `reloadGraph` on the consumed context value are exactly the same function references the mocked `useSprintGraph(safeSprintId)` returned (reference equality), confirming no re-derivation of graph traversal logic | render-interaction  | derived invariant — dependency-boundary non-duplication |
+| 9   | `contexts/SprintContext.tsx` | `useSprint()` outside a provider — a harness consumer calling `useSprint()` without a wrapping `SprintProvider` throws `Error('useSprint must be used within a SprintProvider')`; new coverage for this file, not satisfied by `AuthContext.tsx`'s already-tested analogous guard | render-interaction  | derived invariant — provider-missing guard              |
+
+Row count: 9, all against `contexts/SprintContext.tsx`, every row
+`requirementId: req-u3-contexts` per `contract-traceability-ledger` (omitted
+from each row above for brevity, consistent with the `u1-services`/`u2-hooks`
+chapters' convention). This resolves `req-plan-traceability`'s "every
+in-scope file appears in exactly one row" constraint for this unit's single
+file — no row is split under a different requirement id, and no row names
+`AuthContext.tsx` or `IntentContext.tsx` (`business-rules-u3-contexts` Rule 2).
+
+Both of `req-u3-contexts`'s scenario-bearing acceptance criteria are satisfied
+directly: ac1 by rows 1–2 (and reinforced by rows 3–4's fail-open/reset
+coverage), ac2 by row 5. The third acceptance criterion (excluding
+`AuthContext.tsx`) is satisfied by omission — no row above names that file —
+and row 9 confirms that exclusion does not extend to `SprintContext.tsx`'s own
+analogous guard, per `business-rules-u3-contexts`.
+
+No file in this chapter is Won't-Have, per `business-rules-u3-contexts` Rule 3
+— the unit's single file exports a stateful provider and hook with
+independently testable behavior.
+
+#### Dependency-boundary and advisory-framing conformance
+
+Rows 3, 4, and 8 above mock `u1-services`' `ApiError` shape and `u2-hooks`'
+`useSprintGraph` return shape exactly as published
+(`contract-service-call-signatures`, `contract-hook-state-shapes`), per
+`business-rules-u3-contexts` Rule 5 and `security-design-u3-contexts`'s
+Error-Shape Reuse and Graph-Lookup Mocking Boundary designs — no row
+re-derives either shape independently. Every scenario above is phrased as
+coverage the plan is building toward ("the scenario verifies…" /
+"asserts…" / "confirms…"), never as behavior a CI gate already enforces, per
+`req-advisory-alignment` and `business-rules-u3-contexts` Rule 4. No scenario
+proposes snapshot testing, shallow rendering, or an assertion on
+`SprintContext`'s internal React Context object rather than what a consumer
+observes via `useSprint()`, per `req-stack-scenario-bound` and
+`tech-stack-decisions-u3-contexts`'s scenario-type binding.
 
 ### Chapter: u4-pages (pending)
 
