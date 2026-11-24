@@ -180,6 +180,120 @@ never invalidates chapters other units already completed.
 
 ### Chapter: u10-settings-auth-misc (pending)
 
-### Chapter: u11-ui-primitives (pending)
+### Chapter: u11-ui-primitives
+
+Scenario coverage for `req-u11-ui-primitives`: the 26 untested `components/ui/`
+Radix/shadcn primitives, per `unit-of-work`'s `u11-ui-primitives` definition,
+`business-rules-u11-ui-primitives`, `domain-entities-u11-ui-primitives`, and
+`security-design-u11-ui-primitives`. This unit `depends_on` only
+`comp-plan-governance` — no `services`/hooks/context dependency exists to mock
+— so, per `contract-scenario-type-bound` and Rule R3, every scenario below
+uses the `render-interaction` branch only.
+
+Per `domain-entities-u11-ui-primitives`' Primitive Classification (verified
+directly against `frontend/src/components/ui/`, confirming the file count
+matches `req-u11-ui-primitives` and satisfying Rule R6), the 26 files split
+into three classes:
+
+- **Content-only** (12, Rule R1 render scenario only): `avatar.tsx`,
+  `badge.tsx`, `button.tsx`, `card.tsx`, `input.tsx`, `label.tsx`,
+  `progress.tsx`, `resizable.tsx`, `scroll-area.tsx`, `separator.tsx`,
+  `skeleton.tsx`, `textarea.tsx`.
+- **Interactive-toggle** (9, Rule R1 render scenario plus Rule R2's mandatory
+  toggle scenario): `accordion.tsx`, `collapsible.tsx`, `dialog.tsx`,
+  `dropdown-menu.tsx`, `select.tsx`, `switch.tsx`, `tabs.tsx`,
+  `toggle-group.tsx`, `tooltip.tsx`.
+- **Composite-stateful** (5, Rule R1 render scenario plus Rule R9's advisory,
+  non-blocking interaction scenario): `alert-dialog.tsx`, `command.tsx`,
+  `popover.tsx`, `sheet.tsx`, `tree-view.tsx`.
+
+No file in this chapter is Won't-Have; all 26 are covered below.
+
+#### Scenario entries and traceability rows
+
+Per `contract-traceability-ledger`, every row below is one `ScenarioEntry`
+drafted via `component-methods`' `draftScenario` and linked via
+`linkTraceability` into this plan's single ledger.
+
+| targetFile | behaviorDescription | scenarioType | acceptanceRef | requirementId |
+| --- | --- | --- | --- | --- |
+| `components/ui/accordion.tsx` | `AccordionContent` renders its children via `getByText` for an item whose `value` is in the expanded `defaultValue`/`value` set. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/accordion.tsx` | Clicking an `AccordionTrigger` via `user-event` expands its `AccordionContent` (content becomes queryable via `getByText`); for `type="single" collapsible`, clicking the same trigger again collapses it. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/alert-dialog.tsx` | `AlertDialogContent` renders its `AlertDialogTitle`/`AlertDialogDescription` children via `getByText` when rendered with `open=true`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/alert-dialog.tsx` | Clicking `AlertDialogTrigger` via `user-event` opens the dialog (`getByRole('alertdialog')`); clicking `AlertDialogAction` or `AlertDialogCancel` closes it. | render-interaction | business-rules R9 (advisory, non-blocking) | req-u11-ui-primitives |
+| `components/ui/avatar.tsx` | `Avatar` renders `AvatarFallback` text content via `getByText` when no `AvatarImage` loads successfully. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/badge.tsx` | `Badge` renders its children text via `getByText` with the default variant class applied. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/button.tsx` | `Button` renders its children label accessible via `getByRole('button', { name: ... })`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/card.tsx` | `Card` composed with `CardHeader`, `CardTitle`, and `CardContent` renders every supplied child's text via `getByText`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/collapsible.tsx` | `CollapsibleContent` renders its children via `getByText` when `Collapsible` is rendered with `open=true`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/collapsible.tsx` | Clicking `CollapsibleTrigger` via `user-event` toggles `open` from `false` to `true` (content becomes queryable) and back to `false` (content becomes absent). | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/command.tsx` | `CommandList` renders its `CommandItem` labels via `getByText` for the supplied items. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/command.tsx` | Typing a filter string into `CommandInput` via `user-event` narrows the visible `CommandItem` entries, asserted by a non-matching item becoming unqueryable via `queryByText`. | render-interaction | business-rules R9 (advisory, non-blocking) | req-u11-ui-primitives |
+| `components/ui/dialog.tsx` | `DialogContent` renders its `DialogTitle`/`DialogDescription` children via `getByText` when `Dialog` is rendered with `open=true`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/dialog.tsx` | Clicking `DialogTrigger` via `user-event` opens the dialog (`getByRole('dialog')`); clicking `DialogClose` or pressing Escape closes it, asserted by the dialog becoming absent via `queryByRole`. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/dropdown-menu.tsx` | `DropdownMenuContent` renders its `DropdownMenuItem` labels via `getByText` once the menu is open. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/dropdown-menu.tsx` | Clicking `DropdownMenuTrigger` via `user-event` opens the menu (items queryable via `getByRole('menuitem')`); selecting an item closes the menu. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/input.tsx` | `Input` renders with the supplied value/placeholder accessible via `getByRole('textbox')` (or `getByPlaceholderText`). | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/label.tsx` | `Label` renders its text content via `getByText` and associates with a form control via its `htmlFor` attribute. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/popover.tsx` | `PopoverContent` renders its supplied children via `getByText` when `Popover` is rendered with `open=true`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/popover.tsx` | Clicking `PopoverTrigger` via `user-event` opens the popover content (queryable via `getByText`); clicking outside or pressing Escape closes it. | render-interaction | business-rules R9 (advisory, non-blocking) | req-u11-ui-primitives |
+| `components/ui/progress.tsx` | `Progress` renders with `role="progressbar"` and exposes the supplied `value` via `aria-valuenow`, asserted via `getByRole('progressbar')`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/resizable.tsx` | `ResizablePanelGroup` composed with `ResizablePanel` and `ResizableHandle` renders the supplied panel children via `getByText`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/scroll-area.tsx` | `ScrollArea` renders its scrollable children content via `getByText`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/select.tsx` | `SelectContent` renders its `SelectItem` labels via `getByText`/`getByRole('option')` once the select is open. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/select.tsx` | Clicking `SelectTrigger` via `user-event` opens the listbox (`getByRole('listbox')`); selecting a `SelectItem` updates the displayed `SelectValue` text and closes the listbox. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/separator.tsx` | `Separator` renders via `getByRole`, exposing `role="separator"` by default or `role="none"` when `decorative` is true, per its orientation/decorative props. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/sheet.tsx` | `SheetContent` renders its supplied children via `getByText` when `Sheet` is rendered with `open=true`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/sheet.tsx` | Clicking `SheetTrigger` via `user-event` opens the sheet panel (content queryable via `getByText`); clicking `SheetClose` or pressing Escape closes it. | render-interaction | business-rules R9 (advisory, non-blocking) | req-u11-ui-primitives |
+| `components/ui/skeleton.tsx` | `Skeleton` renders its placeholder container without throwing when no children are passed, queried via a supplied `data-testid`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/switch.tsx` | `Switch` renders with `role="switch"` and reflects its initial checked/unchecked state via `aria-checked`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/switch.tsx` | Clicking the `Switch` via `user-event` toggles `aria-checked` from `false` to `true` (or vice versa) and fires `onCheckedChange` with the new value. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/tabs.tsx` | `TabsContent` renders the active tab's children via `getByText` for the tab matching the default/current `value`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/tabs.tsx` | Clicking a `TabsTrigger` via `user-event` switches the active `TabsContent` — the newly selected tab's content becomes visible and the previously active tab's content becomes absent/hidden. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/textarea.tsx` | `Textarea` renders with the supplied value/placeholder accessible via `getByRole('textbox')`. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/toggle-group.tsx` | `ToggleGroup` renders its `ToggleGroupItem` children accessible via `getByRole('button')` for each item. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/toggle-group.tsx` | Clicking a `ToggleGroupItem` via `user-event` marks it selected (its `data-state` attribute becomes `"on"`); for a `type="single"` group, the previously selected item becomes deselected. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/tooltip.tsx` | `TooltipContent` renders its supplied text via `getByText` once the `Tooltip` is opened. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/tooltip.tsx` | Hovering or focusing `TooltipTrigger` via `user-event` opens the tooltip (content becomes queryable via `getByText`); moving focus/hover away closes it. | render-interaction | req-u11-ui-primitives AC-2 | req-u11-ui-primitives |
+| `components/ui/tree-view.tsx` | `TreeView` renders its node labels via `getByText` for the supplied `TreeDataItem` data, with a parent node's children hidden until the parent is expanded. | render-interaction | req-u11-ui-primitives AC-1 | req-u11-ui-primitives |
+| `components/ui/tree-view.tsx` | Clicking a parent node's expand control via `user-event` toggles its children's visibility (backed by the `AccordionPrimitive` expand/collapse state `tree-view.tsx` composes internally), and clicking a leaf node marks it selected, asserted via the item's selection-driven render output rather than a binary `aria-checked` toggle. | render-interaction | business-rules R9 (advisory, non-blocking) | req-u11-ui-primitives |
+
+Row count: 40 (12 content-only × 1, 9 interactive-toggle × 2, 5
+composite-stateful × 2), covering all 26 files named in
+`req-u11-ui-primitives` with no omission or duplicate `targetFile`-under-a-
+different-`requirementId` mapping (Rule R5). Every row uses
+`requirementId: "req-u11-ui-primitives"` per `domain-entities-u11-ui-primitives`'
+Traceability Row entity — this unit maps to exactly one requirement with no
+split across units.
+
+#### Unsafe-render (XSS-class) verification
+
+Per `security-design-u11-ui-primitives`' Unsafe-Render Verification Design,
+each of the 26 files was inspected directly for a caller-controlled content
+sink (`dangerouslySetInnerHTML` or equivalent). A direct source read of every
+file in `frontend/src/components/ui/` found no such sink in any of the 26
+files — all are either thin `React.forwardRef` wrappers around a Radix root
+(re-exporting sub-parts with `cn()`-merged class names) or, for `tree-view.tsx`
+and `command.tsx`, bespoke components that render only caller-supplied React
+children/props through normal JSX interpolation, never through an unescaped
+render path. The outcome for every file above is therefore (a) **no
+additional security scenario needed, confirmed by source read** — no file in
+this chapter needed an added unsafe-render scenario under outcome (b).
+
+No authentication, authorization, session, or browser-storage scenario is
+added for any file in this chapter, per `security-design-u11-ui-primitives`'
+Authentication and Authorization Design: none of these 26 presentational
+primitives gate rendering on identity, and none is confirmed by source read to
+read or write clipboard/local-storage/session content.
+
+#### Query/assertion and tech-stack conformance
+
+Every scenario above is phrased as a Testing Library role/text/label query
+plus (where applicable) a `user-event` interaction or a rendered-output
+assertion, per `tech-stack-decisions-u11-ui-primitives`' Query and Assertion
+Patterns — no scenario proposes snapshot testing, shallow rendering, or an
+assertion on Radix internal state, CSS class names, or DOM structure beyond
+accessible role/label/text (Rule R4). No scenario requires tooling beyond the
+already-confirmed Vitest 4 / Testing Library / `user-event` / jsdom stack.
 
 ### Chapter: u12-icons-layout-theme (pending)
