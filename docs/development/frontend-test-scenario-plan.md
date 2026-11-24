@@ -689,7 +689,153 @@ trusting the "untested" label at face value.
 
 ### Chapter: u8-admin-components (pending)
 
-### Chapter: u9-discussion-components (pending)
+### Chapter: u9-discussion-components
+
+Scenario coverage for `req-u9-discussion-components`, owned by
+`comp-u9-discussion-components`. Per `unit-of-work`'s `unit-u9-discussion-components`
+definition, `business-rules-u9-discussion-components`,
+`domain-entities-u9-discussion-components`, and `security-design-u9-discussion-components`,
+this chapter covers the 5 untested files in `frontend/src/components/discussion/` —
+`DiscussButton.tsx`, `DiscussionsTab.tsx`, `MentionToasts.tsx`,
+`MessageBubble.tsx`, `ResolveDialog.tsx`. `DiscussionInput.tsx`,
+`DiscussionPanel.tsx`, `DiscussionProvider.tsx`, and `DiscussionThread.tsx`
+already each have a matching `*.test.tsx` file and are out of this unit's
+scope, confirmed by direct inspection of the directory. This unit owns no
+pure functions, hooks, or contexts of its own, so every row below uses the
+`render-interaction` scenario type `contract-scenario-type-bound` fixes, per
+BR-1 of `business-rules-u9-discussion-components`. `requirementId` is
+`req-u9-discussion-components` for every row, per
+`contract-traceability-ledger`.
+
+#### Won't-Have verification for this unit
+
+`components/discussion/index.ts` was directly read, not folder-inferred: it
+contains only `export { ... }` / `export type { ... }` re-export statements
+for the module's ten public exports, with zero function or logic
+definitions. It stays Won't-Have — no row is added for it below, per
+`req-wont-have-verification` and BR-8 of `business-rules-u9-discussion-components`.
+
+| File                              | Status                                    | Evidence                                           |
+| ---------------------------------- | ------------------------------------------ | --------------------------------------------------- |
+| `components/discussion/index.ts`   | Confirmed Won't-Have — no scenario needed | Direct read: pure re-export barrel, zero functions |
+
+#### Known discrepancy — stated `u2-hooks` dependency is not concretely exercised
+
+`unit-of-work` and `requirements` both state this unit depends on `u2-hooks`
+(`useCollaborativeArtifact*`, `usePresence`) via `contract-hook-state-shapes`,
+and that contract lists `u9-discussion-components` as a consumer. Direct
+inspection of this unit's five untested files, and of the already-tested
+`DiscussionProvider.tsx` they read through `useDiscussions()`, found none of
+them importing `useCollaborativeArtifact`, `useCollaborativeArtifactContent`,
+`useCollaborativeStructuredAnswer`, or `usePresence` from `hooks/` —
+`DiscussionProvider.tsx` wires its realtime behavior through `realtimeService`
+(a plain WebSocket client) and `useAuth()`, not the Yjs-awareness-backed
+`usePresence` hook `contract-hook-state-shapes` describes. Following this
+repository's guidance to investigate such a discrepancy rather than assume
+either side is correct (per BR-9 of `business-rules-u9-discussion-components`
+and the precedent `business-rules-u2-hooks` set for `useSprintGraph.ts`), every
+scenario below mocks `useDiscussions()` directly with plain in-memory fixture
+data; no row mocks or renders against a `contract-hook-state-shapes` shape,
+and no row below cites it. The formal `consumes` relationship to
+`contract-hook-state-shapes` is preserved in this unit's traceability as a
+real declared input, but is recorded here as not concretely realized in any
+scenario. If a future change wires `usePresence` or a collaborative hook into
+`DiscussionProvider.tsx` or any of this unit's five files, this note and this
+unit's scenario set should be re-opened rather than trusted at face value.
+
+#### Acceptance-criteria mapping per file
+
+`req-u9-discussion-components`'s acceptance criteria require, per untested
+file, "at least one scenario for posting/receiving a discussion message and
+one for the resolved/unresolved thread state." Per BR-2 of
+`business-rules-u9-discussion-components`, three files map directly and two
+substitute the closest analogous state boundary the file actually renders
+(recorded explicitly below rather than invented):
+
+| File                   | "Post/receive message" scenario                                                             | "Resolved/unresolved" scenario                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `DiscussButton.tsx`    | Receiving: badge/label transitions as `unreadCount` moves 0 → N (direct fit)                 | Substituted: read-only v1 gate — sprint scope with no thread renders `null`, sprint scope with a thread opens it  |
+| `DiscussionsTab.tsx`   | Receiving: thread list/search results reflect posted/updated discussions (direct fit)        | Direct fit: `status === 'resolved'` renders the check icon + summary; the `resolved` filter narrows the list     |
+| `MentionToasts.tsx`    | Receiving: a mention toast is posted into the stack and renders the author/excerpt (direct fit) | Substituted: the toast's own open → dismissed transition                                                        |
+| `MessageBubble.tsx`    | Receiving: a `MessageGroup` renders its messages, including agent running/failed-retry states (direct fit) | Substituted: the per-message redacted vs. non-redacted render                                                   |
+| `ResolveDialog.tsx`    | Substituted: the optional outcome-message picker over existing messages                       | Direct fit: this file *is* the unresolved → resolved transition — submitting resolves, cancelling leaves unresolved |
+
+#### Scenario entries and traceability rows
+
+Per `contract-traceability-ledger`, every row below is one `ScenarioEntry`
+linked into this plan's single ledger, with `requirementId:
+req-u9-discussion-components` (omitted from each row for brevity — no row in
+this chapter uses a different requirement id). Fixture values follow
+`security-design-u9-discussion-components`'s Fixture and Artifact Hygiene
+Design: sequential synthetic identifiers (`msg-fixture-1`,
+`thread-fixture-1`, `author: "Fixture User"`), never a real username, token,
+or value copied from a live environment.
+
+| targetFile | behaviorDescription | scenarioType | acceptanceRef |
+| --- | --- | --- | --- |
+| `DiscussButton.tsx` | Renders `null` when `useDiscussions()` returns falsy (no provider mounted) | render-interaction | derived invariant (BR-3) |
+| `DiscussButton.tsx` | Renders `null` when the resolved scope is `kind: 'sprint'` and `discussionFor(entityType, entityId)` returns no thread (v1 read-only gate) | render-interaction | resolved/unresolved (substituted boundary) |
+| `DiscussButton.tsx` | Renders plain `"Discuss"` with no badge when `unread === 0` and `messageCount === 0` | render-interaction | derived invariant (BR-3) |
+| `DiscussButton.tsx` | Renders `"Discuss (N unread)"` with a numeric pill, tinted icon, when `unread > 0`, capped at `"99+"` beyond 99 | render-interaction | post/receive message |
+| `DiscussButton.tsx` | Renders `"Discuss (ongoing)"` with a dot indicator, tinted icon, when `unread === 0` and `messageCount > 0` | render-interaction | post/receive message |
+| `DiscussButton.tsx` | Clicking with an existing thread calls `discussions.openDiscussionById(thread.id)` and stops event propagation | render-interaction | derived invariant (BR-3) |
+| `DiscussButton.tsx` | Clicking with no thread (non-sprint scope) calls `discussions.openDiscussion({ entityType, entityId, entityTitle })` and stops event propagation | render-interaction | derived invariant (BR-3) |
+| `DiscussionsTab.tsx` | Renders `null` when `useDiscussions()` is falsy | render-interaction | derived invariant (BR-4) |
+| `DiscussionsTab.tsx` | A trimmed query of length ≥3 sets `searching = true`, then after the 350ms debounce calls `discussionsService.search(scope, { q, status })` and swaps the list view to search results | render-interaction | post/receive message |
+| `DiscussionsTab.tsx` | A query trimmed to <3 characters (including on backspace from a longer query) immediately clears `searchResults` to `null` and `searching` to `false`, reverting to the local filtered list | render-interaction | derived invariant (BR-4) |
+| `DiscussionsTab.tsx` | A failed search call resolves `searchResults` to an empty array (via `.catch(() => [])`) and renders the "No matches." copy, not a crash | render-interaction | derived invariant (BR-4) |
+| `DiscussionsTab.tsx` | The three status filter buttons (`all`/`open`/`resolved`) are mutually exclusive and `filtered = discussions.filter(d => statusFilter === 'all' \|\| d.status === statusFilter)` narrows the local list accordingly | render-interaction | resolved/unresolved (direct fit) |
+| `DiscussionsTab.tsx` | A thread row with `status === 'resolved'` renders the check icon with tooltip (`resolutionSummary` or `"Resolved by {resolvedByName \|\| 'a member'}"`); a non-resolved row renders neither | render-interaction | resolved/unresolved (direct fit) |
+| `DiscussionsTab.tsx` | Empty-local-list copy is scope-aware: `scope?.kind === 'sprint'` renders "v1 discussions are read-only."; any other scope renders the open-from-anywhere hint | render-interaction | derived invariant (BR-4) |
+| `DiscussionsTab.tsx` | Clicking a thread row or a search result calls `ctx.openDiscussionById` with that row's/result's discussion id | render-interaction | post/receive message |
+| `MentionToasts.tsx` | Renders `null` when `toasts.length === 0` — no empty-state placeholder rendered | render-interaction | derived invariant (BR-5; security-design SEC-5) |
+| `MentionToasts.tsx` | A toast fixture with `excerpt` explicitly `undefined` renders `{byName} mentioned you` with the excerpt region absent from the DOM, never the literal string `"undefined"` | render-interaction | security-design SEC-5 |
+| `MentionToasts.tsx` | A toast fixture with a truthy `excerpt` renders both `{byName} mentioned you` and the excerpt text | render-interaction | post/receive message |
+| `MentionToasts.tsx` | "Jump to thread" calls `onOpen(t.discussionId)` then `onDismiss(t.id)`, in that order — not `onOpen` alone | render-interaction | resolved/unresolved (substituted boundary: dismissed transition) |
+| `MentionToasts.tsx` | The dismiss (X) control calls only `onDismiss(t.id)`, never `onOpen` | render-interaction | resolved/unresolved (substituted boundary: dismissed transition) |
+| `MessageBubble.tsx` | A non-agent author renders a hash-colored circle (`generateColor(authorId \|\| authorName)`) with the first character of `authorName` (or `'?'` when empty) uppercased; `authorType === 'agent'` renders the fixed bot icon instead | render-interaction | post/receive message |
+| `MessageBubble.tsx` | The "requested by … · command" caption renders only for an agent message whose first message in the group has `requestedByName` or `command` set; a user message never renders this caption | render-interaction | post/receive message |
+| `MessageBubble.tsx` | A redacted message (`m.redacted`) renders muted italic content plus, only when `redactedAt` is set, a relative-time suffix, and never renders through `ReactMarkdown`; the original `content` string is absent from the rendered DOM | render-interaction | resolved/unresolved (substituted boundary: redacted vs. non-redacted); security-design SEC-3 |
+| `MessageBubble.tsx` | A non-redacted message containing a Markdown link and an emphasis marker renders through `ReactMarkdown`/`remark-gfm` as a resolved `<a>` with accessible name and an emphasized text node, asserted via role/text query, never `innerHTML` | render-interaction | post/receive message; security-design SEC-4 |
+| `MessageBubble.tsx` | `assistStatus === 'running'` on a non-redacted agent message renders a spinner caption | render-interaction | post/receive message |
+| `MessageBubble.tsx` | `assistStatus === 'failed'` with both `requestId` and `onAssistRetry` supplied renders a "failed - retry" control, and clicking it calls `onAssistRetry(m.id)`; omitting either suppresses the control | render-interaction | post/receive message |
+| `MessageBubble.tsx` | The per-message redact control renders only when both `canRedact` is truthy and `onRedact` is supplied, and clicking its menu item calls `onRedact(m.id)`; either condition alone suppresses the control | render-interaction | derived invariant (BR-6) |
+| `ResolveDialog.tsx` | Outcome candidates render as `messages.filter(m => !m.redacted).slice(-8)` — redacted messages excluded, only the most recent 8 non-redacted messages offered | render-interaction | post/receive message (substituted boundary) |
+| `ResolveDialog.tsx` | Clicking a candidate row toggles `outcomeId`: selecting an already-selected row clears the selection back to `null`; selecting a different row replaces it | render-interaction | post/receive message (substituted boundary) |
+| `ResolveDialog.tsx` | "Resolve" calls `onResolve({ resolutionSummary: summary.trim() \|\| undefined, outcomeMessageId: outcomeId \|\| undefined })` — a blank/whitespace-only summary is sent as `undefined`, not an empty string | render-interaction | resolved/unresolved (direct fit) |
+| `ResolveDialog.tsx` | On a successful `onResolve`, the component clears `summary`/`outcomeId` and calls `onOpenChange(false)` | render-interaction | resolved/unresolved (direct fit) |
+| `ResolveDialog.tsx` | On an `onResolve` rejection with an `Error` instance, the component sets the visible `error` string to `err.message`, keeps the dialog open, resets `busy` to `false`, and does not clear `summary`/`outcomeId` | render-interaction | resolved/unresolved (direct fit); security-design SEC-8 |
+| `ResolveDialog.tsx` | On an `onResolve` rejection with a non-`Error` thrown value, the component renders the fixed fallback string `"Failed to resolve"`, never a coercion of the thrown value | render-interaction | resolved/unresolved (direct fit); security-design SEC-8 |
+| `ResolveDialog.tsx` | Both "Cancel" and "Resolve" are `disabled` while `busy` is `true`; "Cancel" calls `onOpenChange(false)` directly without invoking `onResolve` | render-interaction | resolved/unresolved (direct fit) |
+
+Row count: 33, covering all 5 files `req-u9-discussion-components` names,
+resolving `req-plan-traceability`'s "every in-scope file appears in exactly
+one row" constraint for this unit (7 rows for `DiscussButton.tsx`, 8 for
+`DiscussionsTab.tsx`, 4 for `MentionToasts.tsx`, 7 for `MessageBubble.tsx`, 7
+for `ResolveDialog.tsx`). Every row satisfies BR-2's per-file "post/receive
+message" and "resolved/unresolved" pairing, including the three substituted
+boundaries recorded in the mapping table above rather than an invented direct
+fit. The SEC-3 (redaction-integrity), SEC-4 (Markdown rendering-boundary),
+SEC-5 (mention-toast exposure), and SEC-8 (error-path containment) scenario
+obligations from `security-design-u9-discussion-components` are each
+satisfied by name above.
+
+#### Query/assertion and tech-stack conformance
+
+Every scenario above is phrased as a Testing Library role/text/label query
+plus a callback-invocation or rendered-output assertion, per
+`req-stack-scenario-bound` and BR-1 of
+`business-rules-u9-discussion-components` — no scenario proposes snapshot
+testing, shallow rendering, or an assertion on CSS class names or other
+implementation internals. No authorization-denial scenario is drafted for
+this unit's five files, per `security-design-u9-discussion-components`'s
+SEC-2 scope closure: none renders an admin-only or privileged control, and
+that boundary belongs to `DiscussionProvider.tsx` (out of this unit's scope)
+and to `req-u10-settings-auth-misc`'s own `ProtectedRoute.tsx` scenarios.
+Framing stays advisory throughout, per `req-advisory-alignment`: every
+scenario above reads as coverage the plan is building toward ("the scenario
+verifies..." / "renders..." / "calls..." phrasing), never as behavior a CI
+gate already enforces.
 
 ### Chapter: u10-settings-auth-misc (pending)
 
