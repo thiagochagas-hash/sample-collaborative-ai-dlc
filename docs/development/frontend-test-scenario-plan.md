@@ -798,7 +798,145 @@ duplicate` rather than drafting a redundant scenario set, per
 future coverage measurement shows a real gap here, re-open row 65 rather than
 trusting the "untested" label at face value.
 
-### Chapter: u7-observability-components (pending)
+### Chapter: u7-observability-components
+
+Scenario drafting for `comp-u7-observability-components`, satisfying
+`requirements`'s `req-u7-observability-components`, depending only on
+`comp-plan-governance` and `comp-u2-hooks` per `unit-of-work`'s
+`unit-u7-observability-components` definition. The scenario-authoring rules
+and entity shapes below are drafted per `business-rules-u7-observability-components`
+and `domain-entities-u7-observability-components`, and the mock-boundary and
+fixture-hygiene decisions follow `security-design-u7-observability-components`.
+This unit owns no hooks or contexts and calls no `services/*` client
+directly, so every row's `scenarioType` is one of the two types this unit
+actually needs from the [bounded set](#scenario-types-bounded) —
+`render-interaction` for the eleven presentational components and
+`call-return-throw` for the two non-React files (`buildInsights.ts`,
+`phaseConfig.ts`'s `phaseColorAt`) — per `contract-scenario-type-bound`.
+`requirementId` is `req-u7-observability-components` for every row, per
+`contract-traceability-ledger`.
+
+#### Won't-Have verification for this unit
+
+`components/observability/index.ts` was directly read (not folder-inferred):
+it contains only eleven `export { ... }` re-export statements
+(`ProjectDiagram`, `PhaseBlock`, `StepNode`, `AgentFocusCard`, `ActivityFeed`,
+`TaskStatusRow`, `StuckAlert`, `BusinessView`, `AgentStatusCards`,
+`IntentStatusCards`, `IterationDetailView`), with zero function or logic
+definitions. It stays Won't-Have — no row is added for it below, per
+`req-wont-have-verification` and `req-u7-observability-components`'s own
+second acceptance criterion.
+
+| File                                 | Status                                    | Evidence                                           |
+| ------------------------------------- | ----------------------------------------- | --------------------------------------------------- |
+| `components/observability/index.ts`  | Confirmed Won't-Have — no scenario needed | Direct read: pure re-export barrel, zero functions |
+
+#### Dependency boundary — mock `useObservability`'s contract, do not re-derive it
+
+Per `unit-of-work`'s implementation note ("Depends on `u2-hooks`
+(`useObservability`)") and `contract-hook-state-shapes` (provided by
+`u2-hooks`, consumed here), every scenario below that exercises a component
+receiving `ProjectAgentInfo`, `SprintProgress`, `VelocityMetrics`,
+`ActivityEvent`, `StuckDetection`, `LastToolMap`, or `PendingQuestionsMap`
+constructs that shape as a literal mock prop value, never by instantiating
+`useObservability` itself. The hook's own idle-detection transitions,
+`markBlocked`/`clearStuck` dedup, and ring-buffer cap are `u2-hooks`'s
+`state-transition` scenarios, already fixed in `business-rules-u2-hooks`'s
+`useObservability.ts` rule set — re-deriving them here would duplicate
+coverage across a unit boundary, the same anti-pattern
+`business-rules-u6-graph-components`'s Known Discrepancy rule guards against.
+`IntentStatusCards.tsx`'s `ProjectWithSprint` type (from the out-of-unit
+`useProjectsCache` hook) follows the same rule: a literal mock value, never a
+live hook call.
+
+#### Scenario entries and traceability rows
+
+| #   | `targetFile`            | `behaviorDescription`                                                                                                                                                           | `scenarioType`      | `acceptanceRef`                       |
+| --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------- |
+| 1   | `components/observability/ActivityFeed.tsx` | Consecutive `agent.tool` events sharing the same `semanticTool(detail)` label and the same `sprintId` collapse into one row with an incrementing `×N` count | render-interaction | AC1 (populated-data-state) |
+| 2   | `components/observability/ActivityFeed.tsx` | A non-tool event, or a tool event with a different `semanticTool` label or a different `sprintId`, always starts a new row rather than collapsing | render-interaction | derived invariant |
+| 3   | `components/observability/ActivityFeed.tsx` | Only the first 80 raw `events` are considered, and the collapsed row list is capped at 25 rows even when more distinct rows would otherwise result | render-interaction | derived invariant |
+| 4   | `components/observability/ActivityFeed.tsx` | `multiProject` (more than one key in `projectNames`) gates whether a significant event's row shows the project-name suffix alongside the agent-type suffix | render-interaction | derived invariant |
+| 5   | `components/observability/ActivityFeed.tsx` | `events = []` renders the `Card`/`CardContent` shell with zero rows in the `divide-y` container — no placeholder text, since none exists in source | render-interaction | AC1 (empty/loading-data-state) |
+| 6   | `components/observability/AgentFocusCard.tsx` | All props populated (`agentStatus='running'`, `velocity` set, `pendingQuestions`, `branch`, `prUrl`) renders the focus sentence plus the velocity trend icon/percentage segment | render-interaction | AC1 (populated-data-state) |
+| 7   | `components/observability/AgentFocusCard.tsx` | `agentStatus='running'` with `progress.taskCount > 0` and no `velocity` yet renders the italic "estimating velocity..." fallback instead of a trend segment | render-interaction | derived invariant |
+| 8   | `components/observability/AgentFocusCard.tsx` | All props omitted renders an empty `div` with no badge or text node | render-interaction | AC1 (empty/loading-data-state) |
+| 9   | `components/observability/AgentStatusCards.tsx` | `withSprints` filters out every project whose `effectiveSprintStatus(sprint) === 'idle'`, then sorts the remainder by the fixed order `running → waiting → failed → completed → passed` | render-interaction | AC1 (populated-data-state) |
+| 10  | `components/observability/AgentStatusCards.tsx` | A card's `onClick` handler fires `onSelectSprint` only when that prop is supplied; a card with no `onSelectSprint` prop calls nothing when clicked | render-interaction | derived invariant |
+| 11  | `components/observability/AgentStatusCards.tsx` | Zero non-idle projects renders the literal `"No recent agent activity."` message instead of the card grid | render-interaction | AC1 (empty/loading-data-state) |
+| 12  | `components/observability/BusinessView.tsx` | Each of the four `Section`s (Highlights, Lowlights, Risks, Action Items) renders only when `buildInsights`'s corresponding array is non-empty | render-interaction | AC1 (populated-data-state) |
+| 13  | `components/observability/BusinessView.tsx` | A `Risk` with `severity === 'high'` renders with a darker red item color than a `severity === 'medium'` risk | render-interaction | derived invariant |
+| 14  | `components/observability/BusinessView.tsx` | An empty `projects` input (routed through `buildInsights`'s zero-project branch) renders only the single `"No spaces yet — create a space to get started"` highlight and no other `Section` — `BusinessView` itself never returns `null` | render-interaction | AC1 (empty/loading-data-state) |
+| 15  | `components/observability/IntentStatusCards.tsx` | `visible` filters `items` to non-idle `effectiveIntentStatus` entries and sorts by the fixed order `running → waiting → failed → passed` | render-interaction | AC1 (populated-data-state) |
+| 16  | `components/observability/IntentStatusCards.tsx` | Clicking a card calls `navigate` with `/space/{projectId}/intent/{intentId}/observability` | render-interaction | derived invariant |
+| 17  | `components/observability/IntentStatusCards.tsx` | Zero non-idle items makes the component return `null` — a true unmount, not an empty-state message (the opposite pattern from `AgentStatusCards`) | render-interaction | AC1 (empty/loading-data-state) |
+| 18  | `components/observability/IterationDetailView.tsx` | The `AgentStreamPanel` branch's `streamingText` prop prefers `agentStream.completedOutput` over `agentStream.streamingText` when both are present | render-interaction | AC1 (populated-data-state) |
+| 19  | `components/observability/IterationDetailView.tsx` | `onNavigate`'s `workbenchPath` appends `/construction` or `/review` only when `sprint.phase` matches that segment, and falls back to the bare sprint/project path otherwise | render-interaction | derived invariant |
+| 20  | `components/observability/IterationDetailView.tsx` | Neither `isAgentActive` nor a non-empty `streamingText`/`completedOutput` renders the `"No agent activity right now"` placeholder with a muted `Bot` icon | render-interaction | AC1 (empty/loading-data-state) |
+| 21  | `components/observability/PhaseBlock.tsx` | The `{done}/{total}` progress fraction and its progress-bar width render only when `isCurrentPhase && (progress?.totalNodes ?? 0) > 0` | render-interaction | AC1 (populated-data-state) |
+| 22  | `components/observability/PhaseBlock.tsx` | The running-tasks suffix (`"· N running"`) renders only when `config.key === 'CONSTRUCTION'` and at least one task has `executionStatus === 'RUNNING'` | render-interaction | derived invariant |
+| 23  | `components/observability/PhaseBlock.tsx` | The `isFirstIncompleteMandatory` highlight lands on exactly one `StepNode` — the first mandatory step, in document order, not yet done, while the agent is `running` — not on every incomplete mandatory step | render-interaction | derived invariant |
+| 24  | `components/observability/PhaseBlock.tsx` | `progress` null or `progress.totalNodes === 0` renders the em-dash `"—"` placeholder and no progress bar | render-interaction | AC1 (empty/loading-data-state) |
+| 25  | `components/observability/ProjectDiagram.tsx` | `getStepsDone`/`getStepsSkipped` derive the `INCEPTION` phase's completed/skipped step sets from `progress`/`taskStatuses` | render-interaction | AC1 (populated-data-state) |
+| 26  | `components/observability/ProjectDiagram.tsx` | `getStepsDone`/`getStepsSkipped` derive the `CONSTRUCTION` phase's completed/skipped step sets independently of the `INCEPTION` derivation | render-interaction | derived invariant |
+| 27  | `components/observability/ProjectDiagram.tsx` | `getStepsDone`/`getStepsSkipped` derive the `REVIEW` phase's completed/skipped step sets independently of the other two phases | render-interaction | derived invariant |
+| 28  | `components/observability/ProjectDiagram.tsx` | `isFuturePhase`/`isUnlocked` dims every phase after the current one, and only when `info.sprint` is set | render-interaction | derived invariant |
+| 29  | `components/observability/ProjectDiagram.tsx` | `info.sprint === null` renders the `"No sprint started"` italic placeholder above the still-rendered, all-locked phase list | render-interaction | AC1 (empty/loading-data-state) |
+| 30  | `components/observability/StepNode.tsx` | `isDone = true` (and not skipped) renders the green "✓ Done" variant | render-interaction | AC1 (populated-data-state) |
+| 31  | `components/observability/StepNode.tsx` | `isSkipped = true` renders the dashed-border, strikethrough-label, "— Skipped" variant, visually and textually distinct from the done variant, and takes precedence even when `isDone` could also be computed true-ish | render-interaction | derived invariant |
+| 32  | `components/observability/StepNode.tsx` | All state flags false (a future, unreached step) renders the grayscale/opacity-40 default variant with the step's `MANDATORY`/`CONDITIONAL` label and no done/skipped marker | render-interaction | AC1 (empty/loading-data-state) |
+| 33  | `components/observability/StuckAlert.tsx` | A non-empty `detections` array renders one alert row per detection, sorted `critical → high → medium` by `severity` via a stable sort | render-interaction | AC1 (populated-data-state) |
+| 34  | `components/observability/StuckAlert.tsx` | Each `reason` (`blocked_question`, `repeated_tool`, `idle`) maps to a fixed icon/color/label/border-width combination, and only `blocked_question` gets the pulsing/shadow treatment | render-interaction | derived invariant |
+| 35  | `components/observability/StuckAlert.tsx` | `detections = []` makes the component return `null` | render-interaction | AC1 (empty/loading-data-state) |
+| 36  | `components/observability/TaskStatusRow.tsx` | Each `executionStatus` value (`RUNNING`, `SUCCEEDED`, `FAILED`) maps to a fixed icon + color combination, one status chip per task | render-interaction | AC1 (populated-data-state) |
+| 37  | `components/observability/TaskStatusRow.tsx` | A task with `executionStatus` undefined/missing falls through to the muted default combination, distinct from all three named states | render-interaction | derived invariant |
+| 38  | `components/observability/TaskStatusRow.tsx` | `tasks = []` makes the component return `null` | render-interaction | AC1 (empty/loading-data-state) |
+| 39  | `components/observability/buildInsights.ts` | `totalProjects === 0` returns a single `"No spaces yet — create a space to get started"` highlight via the calm-state early return, with empty `lowlights`/`risks`/`actions` | call-return-throw | AC1 (empty/loading-data-state) |
+| 40  | `components/observability/buildInsights.ts` | Calm state (`activeCount === 0`) with `totalProjects > 0` returns a workspace-summary highlight plus, per project, a `lowlight` for a sprint paused at a phase or a high-severity `risk` for a sprint whose last run `failed` | call-return-throw | AC1 (populated-data-state) |
+| 41  | `components/observability/buildInsights.ts` | Calm state with `completedSprints > 0` and `prCreated > 0` adds a completed-sprints highlight, a PRs-ready highlight, and one `actions` entry per project carrying a `sprint.prUrl` | call-return-throw | derived invariant |
+| 42  | `components/observability/buildInsights.ts` | Active state, `phase === 'INCEPTION'` branches the highlight text on whether `progress.taskCount`/`progress.requirementCount` is populated | call-return-throw | derived invariant |
+| 43  | `components/observability/buildInsights.ts` | Active state, `phase === 'CONSTRUCTION'` computes the `{done}/{total}` percentage and an `estimateEta` string only when `velocity.tasksPerHour > 0` and at least one task remains | call-return-throw | derived invariant |
+| 44  | `components/observability/buildInsights.ts` | Active state, `phase === 'REVIEW'` adds a code-review highlight and, when `prUrl` is set, an "Approve PR" action | call-return-throw | derived invariant |
+| 45  | `components/observability/buildInsights.ts` | Each `stuckDetections` entry maps by `reason`: `blocked_question`/`repeated_tool` each push a high-severity `risk` plus a matching `actions` entry, while `idle` pushes only a `lowlight` | call-return-throw | derived invariant |
+| 46  | `components/observability/buildInsights.ts` | An active run that produces zero `highlights`/`lowlights`/`risks` falls back to the single `"Agents running — collecting data..."` highlight | call-return-throw | derived invariant |
+| 47  | `components/observability/phaseConfig.ts` | `phaseColorAt(index)` for `index` within `[0, PHASE_CONFIGS.length)` returns the matching phase's five style fields (`headerBg`, `headerText`, `blockBg`, `blockBorder`, `mandatoryBg`, `conditionalBg`) directly | call-return-throw | AC1 (populated-data-state) |
+| 48  | `components/observability/phaseConfig.ts` | `phaseColorAt(PHASE_CONFIGS.length)` wraps via modulo and returns the same five fields as `phaseColorAt(0)` | call-return-throw | AC1 (empty/loading-data-state analog — out-of-range index) |
+
+All 48 rows resolve `req-plan-traceability`'s "every in-scope file appears in
+exactly one row" constraint across this unit's 13 files (rows 1–5
+`ActivityFeed.tsx`; 6–8 `AgentFocusCard.tsx`; 9–11 `AgentStatusCards.tsx`;
+12–14 `BusinessView.tsx`; 15–17 `IntentStatusCards.tsx`; 18–20
+`IterationDetailView.tsx`; 21–24 `PhaseBlock.tsx`; 25–29 `ProjectDiagram.tsx`;
+30–32 `StepNode.tsx`; 33–35 `StuckAlert.tsx`; 36–38 `TaskStatusRow.tsx`; 39–46
+`buildInsights.ts`; 47–48 `phaseConfig.ts`). Per `req-u7-observability-components`'s
+acceptance criteria, every file carries at least one row tagged `AC1
+(populated-data-state)` and one tagged `AC1 (empty/loading-data-state)` — for
+the two pure-function files, which have no literal collection to empty, the
+pairing maps to the zero-project early return (`buildInsights`, row 39) and
+to the out-of-range wrap-around index (`phaseColorAt`, row 48), the nearest
+structural equivalent to an empty/loading state for a pure lookup function.
+Every fixture referenced above (`ProjectAgentInfo`, `ActivityEvent`,
+`StuckDetection`, and similar shapes) is authored as a synthetic inline
+literal per scenario, per `security-design-u7-observability-components`'s
+Fixture and Data-Protection Design — synthetic ids only, no realistic-looking
+secret or streamed-output text. Every component scenario (rows 1–38) asserts
+via a Testing Library role/text/label query or an explicit DOM structural
+fact (row/element presence or absence) — never `container.innerHTML`, a
+snapshot, or a CSS-class/inline-style assertion — per `req-stack-scenario-bound`
+and the same security design's no-snapshot-capture rule.
+
+#### Advisory framing
+
+Per `req-advisory-alignment`, every scenario description above reads as a
+target this plan is building toward, never as an active CI gate — phrasing
+throughout uses "renders...", "resolves...", "maps to..." rather than
+asserting a gate already blocks on this behavior. No scenario in this unit
+proposes snapshot testing, shallow rendering, or an assertion on CSS class
+names/inline style strings, consistent with
+`business-rules-u7-observability-components`'s BR-1 and
+`req-stack-scenario-bound`.
+
+### Chapter: u8-admin-components (pending)
 
 ### Chapter: u8-admin-components (pending)
 
