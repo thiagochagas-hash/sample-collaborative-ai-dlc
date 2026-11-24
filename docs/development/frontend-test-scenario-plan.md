@@ -395,7 +395,160 @@ Fixture ids follow the `env-fixture-*` / `tool-fixture-*` / `revision-fixture-*`
   (`scenario verifies ...` / `resolves ...` / `rejects ...`), never as
   behavior a CI gate already enforces.
 
-### Chapter: u2-hooks (pending)
+### Chapter: u2-hooks
+
+Owned by `comp-u2-hooks`, which delivers `req-u2-hooks` alone, depending on
+`comp-plan-governance` and `comp-u1-services` (`contract-service-call-signatures`
+is this unit's mock boundary for every hook that calls a `services/*` client).
+Per `unit-of-work`'s `unit-u2-hooks` definition, `business-rules-u2-hooks`,
+`domain-entities-u2-hooks`, and `security-design-u2-hooks`, this chapter covers
+the 18 untested `frontend/src/hooks/*.ts` files. Every scenario below is one of
+the three types `contract-scenario-type-bound` fixes — `render-interaction` (via
+`renderHook`, never snapshot/shallow rendering), `call-return-throw` (a mocked
+`services/*` call), or `state-transition` (a before/after on the state shapes
+`domain-entities-u2-hooks` catalogs) — per Rule 1 of `business-rules-u2-hooks`'
+Plan-Governance Rules.
+
+#### Known discrepancy — `useSprintGraph.ts` does not exist; the file is `useIntentGraph.ts`
+
+Direct inspection of `frontend/src/hooks/` (per `req-wont-have-verification`'s
+evidence standard, applied here to a naming check rather than a Wont-Have
+classification) found no `useSprintGraph.ts`. The file `domain-entities-u2-hooks`
+describes under that name is `useIntentGraph.ts` — its own leading comment
+reads "the v2 port of v1's `useSprintGraph`" — and its actual returned shape
+differs from the `SprintGraphState` entity on file: it is `{ nodes, edges,
+loading, error, getNeighbors, hasCodeTraceability, derivedItems, itemsByArtifact,
+reload }`, not `{ graph, loading, error, reload, getNeighbors, hasRelationships,
+nodeCount, edgeCount }`. Following this repository's guidance to investigate
+such a discrepancy rather than trust either side at face value (and the
+precedent `business-rules-u6-graph-components`' BR-7 set for a stale upstream
+label), the two scenarios below are drafted against `useIntentGraph.ts`'s actual
+exported shape, and this unit's `TraceabilityRow` for this file names
+`useIntentGraph.ts` as `targetFile`, not the stale `useSprintGraph.ts` name.
+
+#### Known gap — three untested `hooks/` files are outside this unit's named scope
+
+Direct inspection of `frontend/src/hooks/` also found three untested files not
+named by `req-u2-hooks` or `unit-of-work`'s `unit-u2-hooks` file list:
+`useAutoSave.ts`, `useCollaborativeInception.ts`, and
+`useCollaborativeIntentDraft.ts` (none has a sibling `.test.ts`, unlike
+`useDiscussion.ts`, `useIntentEvents.ts`, and `useProjectsCache.ts`, which do and
+are correctly excluded from both this chapter and `req-u2-hooks`). This chapter
+does not draft scenarios for these three: `req-u2-hooks` and `unit-u2-hooks`
+fix this unit's scope at exactly 18 files, and expanding that count is a
+requirements-layer decision (per this repository's guidance to investigate
+rather than silently assume either side is correct), not something a single
+unit's code-generation pass makes unilaterally. These three files are flagged
+here as a gap against the 90% goal for a future requirements-analysis
+correction to `req-u2-hooks` or a new unit — they are not claimed as covered by
+any row below, and they are not Wont-Have (each is a stateful hook with
+independently testable behavior).
+
+#### Scenario entries and traceability rows
+
+Per `contract-traceability-ledger`, every row below is one `ScenarioEntry`
+linked into this plan's single ledger, with `requirementId: req-u2-hooks`
+(omitted from each row for brevity — no row in this chapter uses a different
+requirement id). Fixture values follow `security-design-u2-hooks`' Fixture and
+Artifact Hygiene Design: synthetic ids (`task-fixture-1`, `sprint-fixture-1`),
+a synthetic execution ARN (`arn:aws:states:us-east-1:000000000000:execution:example:fixture-1`),
+never a realistic-looking secret or a value adapted from a real execution.
+
+| targetFile | behaviorDescription | scenarioType | acceptanceRef |
+| --- | --- | --- | --- |
+| `useAgentStatus.ts` | No-op transition — `refresh()` with both `currentArn` and the `executionId` prop absent makes no service call and leaves `status`/`questions` unchanged | state-transition | ac1 |
+| `useAgentStatus.ts` | Populated transition — `refresh()` with `currentArn` set resolves `status` from `agentsService.getCurrentExecution` and updates `status.status` through `RUNNING` → `SUCCEEDED` | state-transition | ac1 |
+| `useAgentStatus.ts` | Duplicate/out-of-order rejection — dispatching an `agent.chunk` event whose `seq` the hook's `SeqDeduplicator` already accepted leaves `streamingText`/`toolCalls` unchanged | state-transition | ac1; security-design-u2-hooks realtime-integrity design |
+| `useAgentStatus.ts` | Routing-boundary isolation — an `agent.error` event carrying a non-null `agentTaskId` leaves this hook's agent-level state unchanged (task-level errors are `useConstructionStatus.ts`'s concern) | state-transition | ac1; security-design-u2-hooks realtime-integrity design |
+| `useConstructionStatus.ts` | No-op transition — `refreshTasks()` with `projectId`/`sprintId` and `executionArn` all absent makes no service call | state-transition | ac1 |
+| `useConstructionStatus.ts` | Orchestrator-routing isolation — an event with `agentTaskId` absent (or `'orchestrator'`) updates only `orchestratorStream`; `taskStreams` is unchanged | state-transition | ac1; security-design-u2-hooks realtime-integrity design |
+| `useConstructionStatus.ts` | Task-routing isolation — an event naming a specific `agentTaskId` updates only `taskStreams[agentTaskId]`; `orchestratorStream` and sibling task entries are unchanged | state-transition | ac1; security-design-u2-hooks realtime-integrity design |
+| `useConstructionStatus.ts` | Duplicate/out-of-order rejection — a repeated `seq` on an `agent.tool_update` event leaves the targeted stream's `toolCalls` unchanged | state-transition | ac1; security-design-u2-hooks realtime-integrity design |
+| `useConstructionStatus.ts` | `agent.completed` reclaims every non-`'orchestrator'` stream buffer from `taskStreams` while `orchestratorStream` survives unchanged | state-transition | ac1 |
+| `useAuthSession.ts` | Authenticated scenario — rendered with a fixture `user` supplied, `isAuthenticated === true` and every derived field (`userId`, `username`, `displayName`, `avatarUrl`) is populated from that fixture | render-interaction | ac2 |
+| `useAuthSession.ts` | Unauthenticated scenario — rendered with no session, `isAuthenticated === false`, `user === null`, and each derived field is explicitly asserted `toBeUndefined()` | render-interaction | ac2 |
+| `useAuthSession.ts` | Loading scenario — rendered mid-resolution, `isLoading === true` while `isAuthenticated === false`, asserted independently of the unauthenticated scenario above | render-interaction | ac1 |
+| `useGitProviderStatus.ts` | No-provider scenario — `provider === ''` makes no network call; `status=null`, `error=null`, `loading=false` | state-transition | ac2 |
+| `useGitProviderStatus.ts` | Connected scenario — a resolved `GitProviderStatus` sets `status={connected:true,...}` | state-transition | ac2 |
+| `useGitProviderStatus.ts` | Disclosed-error scenario — a rejected call carrying `ApiError.body.error` surfaces that exact string as `error` | state-transition | ac2; security-design-u2-hooks error-shape-reuse design |
+| `useGitProviderStatus.ts` | Fallback-error scenario — a rejected call with no `body.error` surfaces the generic `Could not check {label} connection status.` string | state-transition | ac2; security-design-u2-hooks error-shape-reuse design |
+| `useBlockLibraryRelease.ts` | Precedence scenario — supplying both `requestedLibraryRelease` and `requestedRelease` resolves against `requestedLibraryRelease` | state-transition | ac1 |
+| `useBlockLibraryRelease.ts` | Stable-fallback scenario — neither prop supplied resolves the stable catalog (`release.stable === true`) | state-transition | ac1 |
+| `useBlockLibraryRelease.ts` | Stale-request cancellation scenario — a rapid prop change's earlier in-flight request resolving after the newer one does not clobber the state the newer request already set | state-transition | ac1 |
+| `useCollaborativeArtifact.ts` | No-op-diff scenario — `setField` called with a value equal to the current `Y.Text` content against a mocked `useYjsDocument` return does not re-trigger a write | state-transition | ac3 |
+| `useCollaborativeArtifact.ts` | Seed-once scenario — `initFields` after a remote edit already populated the field does not overwrite it | state-transition | ac3 |
+| `useCollaborativeArtifact.ts` | Autosave-gate scenario — autosave does not fire when `isEditing && synced && !!onAutoSave` is false on any one of its three conjuncts | state-transition | ac1; ac3 |
+| `useCollaborativeArtifactContent.ts` | No-op-diff scenario — `setContent` called with the current `Y.Text` value against a mocked `useYjsDocument` return does not re-trigger a write | state-transition | ac3 |
+| `useCollaborativeArtifactContent.ts` | Seed-once scenario — `initContent` after a remote edit already populated `contentText` does not overwrite it | state-transition | ac3 |
+| `useCollaborativeArtifactContent.ts` | Autosave-gate scenario — `flush()`'s autosave path does not fire when its enabled gate is false | state-transition | ac1; ac3 |
+| `useCollaborativeStructuredAnswer.ts` | No-op-diff scenario — `setFreeText` called with the current text content against a mocked `useYjsDocument` return does not re-trigger a write | state-transition | ac3 |
+| `useCollaborativeStructuredAnswer.ts` | Seed-once scenario — `initFromDraft` after a remote edit already populated a selection does not overwrite it | state-transition | ac3 |
+| `useCollaborativeStructuredAnswer.ts` | `toStructuredAnswer()` scenario — an unanswered sub-question defaults to `{selectedOptions: [], freeText: undefined}` in the returned `StructuredAnswer` | state-transition | ac1; ac3 |
+| `usePresence.ts` | Self-exclusion scenario — an awareness fixture including an entry for the hook's own `clientID` is excluded from the returned `users` list | render-interaction | ac3 |
+| `usePresence.ts` | Default-fill scenario — a remote awareness state carrying only `user` (no `presence`) resolves `name='Anonymous'`, `color='#888'`, `activity='idle'` | render-interaction | ac1; ac3 |
+| `useObservability.ts` | `markBlocked` replaces an existing `blocked_question` entry for the same `sprintId` rather than duplicating it | state-transition | ac1 |
+| `useObservability.ts` | `clearStuck` removes every `stuckDetections` entry for a sprint | state-transition | ac1 |
+| `useObservability.ts` | Idle-detection transition — a project moving from not-running to running-and-idle gets exactly one `idle` entry added, not a duplicate on a second poll | state-transition | ac1 |
+| `useObservability.ts` | Idle-detection transition — a project moving from running-and-idle to running-and-not-idle has its `idle` entry removed | state-transition | ac1 |
+| `useObservability.ts` | `refreshOnEvent` always calls `refreshProjects(true)` (forced) even when a prior cached fetch is fresh | state-transition | ac1 |
+| `useProjectSort.ts` | `loadStoredSort` falls back to `'activity'` when `localStorage.getItem('aidlc.projectSort')` holds an unrecognized value | state-transition | ac1 |
+| `useProjectSort.ts` | `loadStoredSort` falls back to `'activity'` when `localStorage` access throws | state-transition | ac1 |
+| `useProjectSort.ts` | `setProjectSort`'s persistence failure (`localStorage.setItem` throws) does not prevent a second mounted hook instance from re-rendering with the new value | state-transition | ac1 |
+| `useProjectSort.ts` | `projectComparator`'s `activity` branch ties a `null` `lastActivityAt` to epoch-0 for ordering purposes | state-transition | ac1 |
+| `useResizablePanel.ts` | `clamp()` — `minWidth` wins even when it exceeds the viewport-fraction cap | state-transition | ac1 |
+| `useResizablePanel.ts` | `clamp()` — the viewport-fraction cap applies when it is the binding constraint | state-transition | ac1 |
+| `useResizablePanel.ts` | Anchor-dependent drag — `anchor='right'` inverts the drag-delta sign relative to `anchor='left'` | render-interaction | ac1 |
+| `useResizablePanel.ts` | Unmount-mid-drag cleanup — listeners registered by `handleResizeStart` are removed via the teardown ref on unmount | render-interaction | ac1 |
+| `useDebounce.ts` | Ordinary scenario — the debounced function fires once, after the configured delay, for a single call | state-transition | ac1 |
+| `useDebounce.ts` | Unmount-flush scenario — a pending debounced call is invoked, not dropped, on unmount | state-transition | ac1 |
+| `useTrackerProviders.ts` | A rejected `refresh()` call sets `providers=[]` and `failed=true` together | state-transition | ac1 |
+| `useTrackerProviders.ts` | A subsequent successful `refresh()` after a failure clears `failed` back to `false` | state-transition | ac1 |
+| `useIntentGraph.ts` | `getNeighbors(id)` for an artifact with no edges returns `[]`, not `undefined` | state-transition | ac1 |
+| `useIntentGraph.ts` | `getNeighbors(id)` filters out an edge referencing a node absent from the node index, rather than including it as a partial entry | state-transition | ac1 |
+| `useQuestionAnchor.ts` | Bounded-retry scenario — the target element is found on the first 100 ms poll | render-interaction | ac1 |
+| `useQuestionAnchor.ts` | Bounded-retry scenario — the target element is never found and polling gives up after 20 attempts | render-interaction | ac1 |
+| `useQuestionAnchor.ts` | `useQuestionLink` — the question is already rendered on the page: the hook scrolls to it and does not navigate | render-interaction | ac1 |
+| `useQuestionAnchor.ts` | `useQuestionLink` — the question is not rendered: the hook navigates with the `#question-{id}` hash, gated on `projectId`/`sprintId` both being present | render-interaction | ac1 |
+| `useMediaQuery.ts` | A query-string change re-subscribes to a new `MediaQueryList` and reflects its `matches` value | state-transition | ac1 |
+| `useSprintEvents.ts` | An event lacking `sprintId` always fires `onEvent`, regardless of the hook's own `sprintId` argument | state-transition | ac1 |
+| `useSprintEvents.ts` | An event carrying a `sprintId` that mismatches the hook's own `sprintId` argument is dropped (`onEvent` not called) | state-transition | ac1 |
+
+Row count: 58, covering all 18 files `req-u2-hooks` names (`useSprintGraph.ts`
+drafted against its actual current file, `useIntentGraph.ts`, per the
+discrepancy note above), every row with `requirementId: req-u2-hooks` per Rule
+2 of `business-rules-u2-hooks`. Both AC1's "primary transition + failure/empty
+state" pairing and AC2's authenticated/unauthenticated/loading coverage for
+`useAuthSession.ts` and `useGitProviderStatus.ts` are satisfied above, and AC3's
+`renderHook`-only, no-live-Yjs-server constraint holds for every
+`useCollaborativeArtifact*.ts`/`usePresence.ts` scenario, per
+`security-design-u2-hooks`' mocked-transport-only design.
+
+No file in this chapter is Won't-Have, per Rule 3 of `business-rules-u2-hooks`
+— each of the 18 files exports at least one stateful hook with independently
+testable behavior.
+
+#### Dependency ordering
+
+Per Rule 5 of `business-rules-u2-hooks`, the `useGitProviderStatus.ts` and
+`useTrackerProviders.ts` failure-path scenarios above mock the exact `ApiError`
+shape `contract-service-call-signatures` fixes (`comp-u1-services`' chapter
+above) rather than inventing a parallel error shape — this unit's drafting
+could only finalize those rows because `u1-services` already published that
+contract.
+
+#### Advisory framing and tech-stack conformance
+
+Every scenario above reads as coverage this plan is building toward
+(`req-advisory-alignment`): "the scenario verifies..." / "resolves..." /
+"leaves ... unchanged" phrasing throughout, never implying an active CI gate.
+No scenario proposes snapshot testing, shallow rendering, or an assertion on a
+hook's internal `Y.Doc`/ref structure rather than its public return shape
+(`req-stack-scenario-bound`; `business-rules-u2-hooks` Rule 1) — every
+`render-interaction` row is phrased as a `renderHook` result assertion or a
+Testing Library query, and every `state-transition`/`call-return-throw` row
+asserts a before/after on the state shapes `domain-entities-u2-hooks` catalogs.
+
+### Chapter: u3-contexts (pending)
 
 ### Chapter: u3-contexts (pending)
 
